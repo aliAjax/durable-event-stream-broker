@@ -58,7 +58,19 @@ func (b *Broker) Append(ctx context.Context, tenant, topic string, part int, rec
 	if err = t.Reserve(bytes); err != nil {
 		return nil, err
 	}
-	time.Sleep(5 * time.Millisecond)
+	// committed tracks whether the reservation has been consumed by a
+	// durable append; every non-success return below hands it back.
+	committed := false
+	defer func() {
+		if !committed {
+			t.Release(bytes)
+		}
+	}()
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-time.After(5 * time.Millisecond):
+	}
 	p, err := b.Repo.Topic(topic)
 	if err != nil {
 		return nil, err
@@ -79,12 +91,13 @@ func (b *Broker) Append(ctx context.Context, tenant, topic string, part int, rec
 	}
 	b.mu.Unlock()
 	if q := b.Quotas[tenant]; q != nil && !q.Allow(int(bytes)) {
-		t.Release(bytes)
 		return nil, domain.E(domain.ErrQuota, "publish rate exceeded")
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 	out, err := pt.Append(records, producer, seq)
 	if err != nil {
-		t.Release(bytes)
 		return nil, err
 	}
 	if idem != "" {
@@ -92,6 +105,7 @@ func (b *Broker) Append(ctx context.Context, tenant, topic string, part int, rec
 		b.Seen[idem] = out[0].Offset
 		b.mu.Unlock()
 	}
+	committed = true
 	return out, nil
 }
 func (b *Broker) Fetch(topic string, part int, after domain.Offset, limit int) ([]domain.Record, error) {

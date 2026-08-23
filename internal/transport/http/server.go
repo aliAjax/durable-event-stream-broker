@@ -126,9 +126,13 @@ func (s *Server) append(w http.ResponseWriter, r *http.Request, id string) {
 		problem(w, 400, domain.ErrInvalid, "invalid body")
 		return
 	}
+	tenant := tenantFrom(r)
+	if tenant == "" {
+		tenant = in.TenantID
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
-	out, err := s.Broker.Append(ctx, in.TenantID, id, in.Partition, in.Records, in.ProducerID, in.Sequence, r.Header.Get("Idempotency-Key"))
+	out, err := s.Broker.Append(ctx, tenant, id, in.Partition, in.Records, in.ProducerID, in.Sequence, r.Header.Get("Idempotency-Key"))
 	if err != nil {
 		problemErr(w, err)
 		return

@@ -10,9 +10,11 @@ var idPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$`)
 
 func validID(s string) bool { return idPattern.MatchString(s) }
 func tenantFrom(r *http.Request) string {
-	query := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
-	if query != "" { return query }
-	return strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	hdr := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	if hdr != "" {
+		return hdr
+	}
+	return strings.TrimSpace(r.URL.Query().Get("tenant_id"))
 }
 func requestID(r *http.Request) string {
 	v := r.Header.Get("X-Request-ID")

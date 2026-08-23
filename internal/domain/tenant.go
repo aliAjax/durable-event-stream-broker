@@ -16,6 +16,9 @@ func NewTenant(id, name string, quota int64) *Tenant {
 func (t *Tenant) Reserve(n int64) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if n < 0 {
+		return E(ErrInvalid, "negative reserve")
+	}
 	if t.QuotaBytes > 0 && t.UsedBytes+n > t.QuotaBytes {
 		return E(ErrQuota, "tenant byte quota exceeded")
 	}
@@ -25,6 +28,9 @@ func (t *Tenant) Reserve(n int64) error {
 func (t *Tenant) Release(n int64) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if n < 0 {
+		return
+	}
 	t.UsedBytes -= n
 	if t.UsedBytes < 0 {
 		t.UsedBytes = 0
