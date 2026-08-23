@@ -6,12 +6,29 @@ type Tenant struct {
 	ID, Name              string
 	QuotaBytes, UsedBytes int64
 	RatePerSecond         int
-	Connections           int
+	Connections            int
 	mu                    sync.Mutex
 }
 
 func NewTenant(id, name string, quota int64) *Tenant {
 	return &Tenant{ID: id, Name: name, QuotaBytes: quota, RatePerSecond: 1000}
+}
+func (t *Tenant) Clone() *Tenant {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return &Tenant{
+		ID:           t.ID,
+		Name:         t.Name,
+		QuotaBytes:   t.QuotaBytes,
+		UsedBytes:    t.UsedBytes,
+		RatePerSecond: t.RatePerSecond,
+		Connections:   t.Connections,
+	}
+}
+func (t *Tenant) SetQuota(n int64) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.QuotaBytes = n
 }
 func (t *Tenant) Reserve(n int64) error {
 	t.mu.Lock()

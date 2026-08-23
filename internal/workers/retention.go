@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"github.com/example/persistent-event-stream-broker/internal/domain"
 	"github.com/example/persistent-event-stream-broker/internal/storage/repository"
 	"sync"
 	"time"
@@ -34,11 +35,11 @@ func (w *RetentionWorker) Start() {
 	}()
 }
 func (w *RetentionWorker) Run() {
-	for _, t := range w.Repo.ListTopics("") {
+	w.Repo.ForEachTopic(func(t *domain.Topic) {
 		for _, p := range t.Partitions {
 			p.Compact()
 		}
-	}
+	})
 }
 func (w *RetentionWorker) Stop(ctx context.Context) error {
 	close(w.stop)

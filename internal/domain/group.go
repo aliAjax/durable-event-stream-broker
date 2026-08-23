@@ -30,6 +30,29 @@ type ConsumerGroup struct {
 func NewGroup(id, topic string) *ConsumerGroup {
 	return &ConsumerGroup{ID: id, TopicID: topic, Members: map[string]*Member{}, Offsets: map[int]Offset{}, State: GroupActive}
 }
+func (g *ConsumerGroup) Clone() *ConsumerGroup {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	c := &ConsumerGroup{
+		ID:         g.ID,
+		TopicID:    g.TopicID,
+		Generation: g.Generation,
+		State:      g.State,
+		Members:    make(map[string]*Member, len(g.Members)),
+		Offsets:    make(map[int]Offset, len(g.Offsets)),
+	}
+	for id, m := range g.Members {
+		mb := *m
+		if len(m.Partitions) > 0 {
+			mb.Partitions = append([]int(nil), m.Partitions...)
+		}
+		c.Members[id] = &mb
+	}
+	for k, v := range g.Offsets {
+		c.Offsets[k] = v
+	}
+	return c
+}
 func (g *ConsumerGroup) Join(id string, now time.Time) {
 	g.mu.Lock()
 	defer g.mu.Unlock()

@@ -47,7 +47,7 @@ func (b *Broker) Append(ctx context.Context, tenant, topic string, part int, rec
 		return nil, ctx.Err()
 	default:
 	}
-	t, err := b.Repo.Tenant(tenant)
+	t, err := b.Repo.TenantLive(tenant)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func (b *Broker) Append(ctx context.Context, tenant, topic string, part int, rec
 	if err = t.Reserve(bytes); err != nil {
 		return nil, err
 	}
-	p, err := b.Repo.Topic(topic)
+	p, err := b.Repo.TopicLive(topic)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (b *Broker) Fetch(topic string, part int, after domain.Offset, limit int) (
 	if limit <= 0 || limit > 1000 {
 		limit = 100
 	}
-	t, err := b.Repo.Topic(topic)
+	t, err := b.Repo.TopicLive(topic)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (b *Broker) Fetch(topic string, part int, after domain.Offset, limit int) (
 	return p.Fetch(after, limit), nil
 }
 func (b *Broker) Commit(group string, topic string, member string, part int, off domain.Offset) error {
-	g := b.Repo.EnsureGroup(group, topic)
+	g := b.Repo.EnsureGroupLive(group, topic)
 	if member != "" {
 		if err := g.Heartbeat(member, time.Now()); err != nil {
 			g.Join(member, time.Now())

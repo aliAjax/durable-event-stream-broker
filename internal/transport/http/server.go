@@ -50,7 +50,11 @@ type tenantReq struct {
 
 func (s *Server) tenants(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		write(w, 200, map[string]any{"items": s.Broker.Repo.Tenants})
+		items := make([]*domain.Tenant, 0, len(s.Broker.Repo.Tenants))
+		for _, t := range s.Broker.Repo.Tenants {
+			items = append(items, t.Clone())
+		}
+		write(w, 200, map[string]any{"items": items})
 		return
 	}
 	var in tenantReq
@@ -91,7 +95,7 @@ func (s *Server) streams(w http.ResponseWriter, r *http.Request) {
 		problemErr(w, err)
 		return
 	}
-	write(w, 201, t)
+	write(w, 201, t.Clone())
 }
 func (s *Server) topic(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/topics/")
@@ -153,23 +157,23 @@ func (s *Server) groups(w http.ResponseWriter, r *http.Request) {
 		problem(w, 404, domain.ErrNotFound, "endpoint")
 		return
 	}
-	g := s.Broker.Repo.EnsureGroup(parts[0], r.URL.Query().Get("topic_id"))
+	g := s.Broker.Repo.EnsureGroupLive(parts[0], r.URL.Query().Get("topic_id"))
 	switch parts[1] {
 	case "join":
 		g.Join(r.URL.Query().Get("member_id"), time.Now())
-		write(w, 200, g)
+		write(w, 200, g.Clone())
 	case "heartbeat":
 		if err := g.Heartbeat(r.URL.Query().Get("member_id"), time.Now()); err != nil {
 			problemErr(w, err)
 			return
 		}
-		write(w, 200, g)
+		write(w, 200, g.Clone())
 	case "pause":
 		g.Pause()
-		write(w, 200, g)
+		write(w, 200, g.Clone())
 	case "resume":
 		g.Resume()
-		write(w, 200, g)
+		write(w, 200, g.Clone())
 	case "offsets":
 		var in struct {
 			Partition int
@@ -183,7 +187,7 @@ func (s *Server) groups(w http.ResponseWriter, r *http.Request) {
 			problemErr(w, err)
 			return
 		}
-		write(w, 200, g)
+		write(w, 200, g.Clone())
 	default:
 		problem(w, 404, domain.ErrNotFound, "endpoint")
 	}

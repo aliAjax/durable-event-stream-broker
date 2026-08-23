@@ -16,8 +16,8 @@ func (w *RebalanceWorker) Run() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	now := time.Now()
-	for _, g := range w.Repo.Groups {
+	w.Repo.ForEachGroup(func(g *domain.ConsumerGroup) {
 		g.Expire(now)
-	}
+	})
 }
 func Assign(g *domain.ConsumerGroup, partitions []int) { g.Assign(partitions) }

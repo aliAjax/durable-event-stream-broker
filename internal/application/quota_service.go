@@ -17,13 +17,13 @@ func (q *QuotaService) Usage(ctx context.Context, tenant string) (map[string]any
 	return map[string]any{"tenant_id": tenant, "used_bytes": u, "quota_bytes": l, "remaining": l - u}, nil
 }
 func (q *QuotaService) Set(ctx context.Context, tenant string, bytes int64) error {
-	t, e := q.Repo.Tenant(tenant)
+	t, e := q.Repo.TenantLive(tenant)
 	if e != nil {
 		return e
 	}
 	if bytes < 0 {
 		return domain.E(domain.ErrInvalid, "negative quota")
 	}
-	t.QuotaBytes = bytes
+	t.SetQuota(bytes)
 	return nil
 }

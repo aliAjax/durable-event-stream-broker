@@ -25,6 +25,21 @@ type Record struct {
 	Transaction string            `json:"transaction,omitempty"`
 	Committed   bool              `json:"committed"`
 }
+
+func (r Record) Clone() Record {
+	c := r
+	if len(r.Value) > 0 {
+		c.Value = make([]byte, len(r.Value))
+		copy(c.Value, r.Value)
+	}
+	if len(r.Headers) > 0 {
+		c.Headers = make(map[string]string, len(r.Headers))
+		for k, v := range r.Headers {
+			c.Headers[k] = v
+		}
+	}
+	return c
+}
 type Partition struct {
 	ID        int
 	Epoch     Epoch
@@ -37,6 +52,21 @@ type Partition struct {
 func NewPartition(id int, retention RetentionPolicy) *Partition {
 	return &Partition{ID: id, Retention: retention}
 }
+func (p *Partition) Clone() *Partition {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	c := &Partition{
+		ID:        p.ID,
+		Epoch:     p.Epoch,
+		Next:      p.Next,
+		Retention: p.Retention,
+		Records:   make([]Record, len(p.Records)),
+	}
+	for i, r := range p.Records {
+		c.Records[i] = r.Clone()
+	}
+	return c
+}
 func (p *Partition) Append(records []Record, producer string, firstSeq int64) ([]Record, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -47,15 +77,22 @@ func (p *Partition) Append(records []Record, producer string, firstSeq int64) ([
 		if len(records[i].Value) > 1<<20 {
 			return nil, E(ErrInvalid, "message too large")
 		}
-		records[i].Offset = p.Next
-		records[i].Timestamp = time.Now().UTC()
-		records[i].ProducerID = producer
-		records[i].Sequence = firstSeq + int64(i)
-		records[i].Committed = true
-		p.Records = append(p.Records, records[i])
+	}
+	stored := make([]Record, len(records))
+	out := make([]Record, len(records))
+	for i := range records {
+		rec := records[i].Clone()
+		rec.Offset = p.Next
+		rec.Timestamp = time.Now().UTC()
+		rec.ProducerID = producer
+		rec.Sequence = firstSeq + int64(i)
+		rec.Committed = true
+		stored[i] = rec
+		out[i] = rec.Clone()
+		p.Records = append(p.Records, stored[i])
 		p.Next++
 	}
-	return records, nil
+	return out, nil
 }
 func (p *Partition) Fetch(after Offset, limit int) []Record {
 	p.mu.RLock()
@@ -63,7 +100,7 @@ func (p *Partition) Fetch(after Offset, limit int) []Record {
 	out := make([]Record, 0, limit)
 	for _, r := range p.Records {
 		if r.Offset > after {
-			out = append(out, r)
+			out = append(out, r.Clone())
 			if len(out) >= limit {
 				break
 			}
@@ -111,6 +148,21 @@ func NewTopic(id, tenant, name string, count int) *Topic {
 		t.Partitions[i] = NewPartition(i, RetentionPolicy{})
 	}
 	return t
+}
+func (t *Topic) Clone() *Topic {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	c := &Topic{
+		ID:         t.ID,
+		Name:       t.Name,
+		TenantID:   t.TenantID,
+		Partitions: make(map[int]*Partition, len(t.Partitions)),
+		CreatedAt:  t.CreatedAt,
+	}
+	for id, p := range t.Partitions {
+		c.Partitions[id] = p.Clone()
+	}
+	return c
 }
 func (t *Topic) Partition(id int) (*Partition, error) {
 	t.mu.RLock()
