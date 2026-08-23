@@ -1,0 +1,13 @@
+.PHONY: test race vet build run smoke
+test:
+	go test ./...
+race:
+	go test -race ./...
+vet:
+	go vet ./...
+build:
+	go build ./...
+run:
+	go run ./cmd/broker
+smoke:
+	bash scripts/smoke.sh
