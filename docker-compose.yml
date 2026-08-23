@@ -1,0 +1,7 @@
+services:
+  broker:
+    build: .
+    ports: ["8080:8080"]
+    environment: {BROKER_HTTP_ADDR: ":8080", BROKER_DATA_DIR: "/var/lib/broker"}
+    volumes: [broker-data:/var/lib/broker]
+volumes: {broker-data: {}}
