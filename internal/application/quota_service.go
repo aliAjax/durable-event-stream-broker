@@ -21,8 +21,8 @@ func (q *QuotaService) Set(ctx context.Context, tenant string, bytes int64) erro
 	if e != nil {
 		return e
 	}
-	if bytes < 0 {
-		return domain.E(domain.ErrInvalid, "negative quota")
+	if bytes < 0 || bytes > domain.MaxQuotaBytes {
+		return domain.E(domain.ErrInvalid, "quota out of range")
 	}
 	t.QuotaBytes = bytes
 	return nil

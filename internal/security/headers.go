@@ -8,8 +8,11 @@ import (
 var sensitive = regexp.MustCompile(`(?i)(authorization|token|password|secret|cookie)`)
 
 func RedactHeaders(in map[string]string) map[string]string {
-	var out map[string]string
+	out := make(map[string]string, len(in))
 	for k, v := range in {
+		if k == "" {
+			continue
+		}
 		if sensitive.MatchString(k) {
 			out[k] = "[REDACTED]"
 		} else {

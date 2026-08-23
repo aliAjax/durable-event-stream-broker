@@ -12,8 +12,17 @@ func (h Headers) Clone() Headers {
 	return out
 }
 func (h Headers) Sanitized(blocked []string) Headers {
-	out := h
+	out := make(Headers, len(h))
+	for k, v := range h {
+		if k == "" {
+			continue
+		}
+		out[k] = v
+	}
 	for _, key := range blocked {
+		if key == "" {
+			continue
+		}
 		for candidate := range out {
 			if strings.EqualFold(candidate, key) {
 				out[candidate] = "[REDACTED]"
@@ -25,6 +34,9 @@ func (h Headers) Sanitized(blocked []string) Headers {
 func (h Headers) Size() int {
 	n := 0
 	for key, value := range h {
+		if key == "" {
+			continue
+		}
 		n += len(key) + len(value)
 	}
 	return n

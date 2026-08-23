@@ -1,6 +1,14 @@
 package config
 
-import "os"
+import (
+	"os"
+
+	"github.com/example/persistent-event-stream-broker/internal/domain"
+)
+
+const MaxSegmentBytes int64 = 1 << 30
+
+var MaxTenantQuota = domain.MaxQuotaBytes
 
 type Config struct {
 	HTTPAddr, DataDir string
@@ -21,7 +29,13 @@ func Default() Config {
 }
 
 func (c Config) Validate() error {
-	if c.HTTPAddr == "" || c.DataDir == "" || c.SegmentBytes < 1024 {
+	if c.HTTPAddr == "" || c.DataDir == "" {
+		return ErrInvalid
+	}
+	if c.SegmentBytes < 1024 || c.SegmentBytes > MaxSegmentBytes {
+		return ErrInvalid
+	}
+	if c.TenantQuota < 0 || c.TenantQuota > MaxTenantQuota {
 		return ErrInvalid
 	}
 	return nil

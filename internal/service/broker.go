@@ -24,6 +24,9 @@ func NewBroker(repo *repository.Repository) *Broker {
 	return &Broker{Repo: repo, Quotas: map[string]*quota.Bucket{}, Seen: map[string]domain.Offset{}}
 }
 func (b *Broker) CreateTenant(id, name string, bytes int64) error {
+	if bytes < 0 || bytes > domain.MaxQuotaBytes {
+		return domain.E(domain.ErrInvalid, "tenant quota out of range")
+	}
 	t := domain.NewTenant(id, name, bytes)
 	if err := b.Repo.CreateTenant(t); err != nil {
 		return err

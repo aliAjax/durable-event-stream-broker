@@ -2,6 +2,8 @@ package domain
 
 import "sync"
 
+const MaxQuotaBytes int64 = 1 << 40
+
 type Tenant struct {
 	ID, Name              string
 	QuotaBytes, UsedBytes int64
