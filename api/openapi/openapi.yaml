@@ -1,0 +1,6 @@
+openapi: 3.0.3
+info: {title: Persistent Event Stream Broker, version: 1.0.0}
+paths:
+  /healthz: {get: {responses: {'200': {description: healthy}}}}
+  /api/v1/topics/{id}/records:append:
+    post: {responses: {'200': {description: appended}, '400': {description: invalid}}}
